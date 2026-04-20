@@ -158,13 +158,22 @@ def _convert_docx_to_pdf(docx_path: str, pdf_path: str):
         import shutil
         lo = shutil.which("libreoffice") or shutil.which("soffice")
         if lo:
+            out_dir = Path(pdf_path).parent
             subprocess.run([lo, "--headless", "--convert-to", "pdf",
-                           "--outdir", str(Path(pdf_path).parent), docx_path],
-                          check=True, capture_output=True)
-            # libreoffice outputs to same dir with .pdf extension
-            expected = Path(docx_path).with_suffix(".pdf")
-            if expected != Path(pdf_path) and expected.exists():
-                expected.rename(pdf_path)
+                           "--outdir", str(out_dir), docx_path],
+                          check=True, capture_output=True, timeout=120)
+            # LibreOffice names output after input file stem
+            docx_stem = Path(docx_path).stem
+            # Handle .tmp.docx → stem is "name.tmp", strip extra suffix
+            if docx_stem.endswith(".tmp"):
+                docx_stem = docx_stem[:-4]
+            # Find the generated PDF (may have original stem or .tmp stem)
+            candidates = list(out_dir.glob(f"{Path(docx_path).stem}.pdf")) + \
+                         list(out_dir.glob(f"{docx_stem}.pdf"))
+            for candidate in candidates:
+                if candidate != Path(pdf_path):
+                    candidate.rename(pdf_path)
+                    break
         else:
             raise RuntimeError(
                 "PDF export is not available in the cloud. "
