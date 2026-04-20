@@ -66,7 +66,9 @@ with st.sidebar:
                     # Save the source image as a thumbnail for reference
                     presets_dir = TEMPLATES_DIR / "presets"
                     presets_dir.mkdir(exist_ok=True)
-                    safe_name = (tpl_name.strip() or tpl_upload.name.rsplit(".", 1)[0]).replace(" ", "_")
+                    import re as _re
+                    raw_name = tpl_name.strip() or tpl_upload.name.rsplit(".", 1)[0]
+                    safe_name = _re.sub(r'[^a-zA-Z0-9_-]', '_', raw_name.replace(" ", "_"))
 
                     # Save preset JSON
                     preset_path = presets_dir / f"{safe_name}.json"
