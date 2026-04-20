@@ -136,14 +136,40 @@ def render_docx(data: dict, template_path: str | Path, output_path: str | Path) 
 
 
 def _convert_docx_to_pdf(docx_path: str, pdf_path: str):
-    """Convert a docx to PDF using Word via COM, with proper thread initialization."""
-    import pythoncom
-    pythoncom.CoInitialize()
-    try:
-        from docx2pdf import convert
-        convert(docx_path, pdf_path)
-    finally:
-        pythoncom.CoUninitialize()
+    """Convert a docx to PDF. Uses Word COM on Windows, raises clear error on Linux/cloud."""
+    import platform
+    if platform.system() == "Windows":
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+            try:
+                from docx2pdf import convert
+                convert(docx_path, pdf_path)
+            finally:
+                pythoncom.CoUninitialize()
+        except ImportError:
+            raise RuntimeError(
+                "PDF conversion requires docx2pdf and pywin32. "
+                "Install with: pip install docx2pdf pywin32"
+            )
+    else:
+        # Linux/Mac/Cloud — try libreoffice as fallback
+        import subprocess
+        import shutil
+        lo = shutil.which("libreoffice") or shutil.which("soffice")
+        if lo:
+            subprocess.run([lo, "--headless", "--convert-to", "pdf",
+                           "--outdir", str(Path(pdf_path).parent), docx_path],
+                          check=True, capture_output=True)
+            # libreoffice outputs to same dir with .pdf extension
+            expected = Path(docx_path).with_suffix(".pdf")
+            if expected != Path(pdf_path) and expected.exists():
+                expected.rename(pdf_path)
+        else:
+            raise RuntimeError(
+                "PDF export is not available in the cloud. "
+                "Download the Word document instead and convert to PDF locally."
+            )
 
 
 def render_pdf(data: dict, template_path: str | Path, output_path: str | Path) -> Path:

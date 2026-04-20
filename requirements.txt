@@ -5,5 +5,4 @@ docxtpl>=0.18.0
 pypdf>=4.0.0
 pdf2image>=1.17.0
 Pillow>=10.0.0
-docx2pdf>=0.1.8
-pywin32>=306
+python-dotenv>=1.0.0
